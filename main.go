@@ -1,9 +1,9 @@
 package main
 
 import (
+	"github.com/ClessLi/go-annotation/example"
+	"github.com/ClessLi/go-annotation/pkg/annotation/transaction"
 	"github.com/go-xorm/xorm"
-	"github.com/handsomestWei/go-annotation/annotation/transaction"
-	"github.com/handsomestWei/go-annotation/example"
 )
 
 // go build -gcflags=-l main.go
@@ -15,5 +15,5 @@ func main() {
 	dao := new(example.ExampleDao)
 	dao.Select()
 	dao.Update(new(xorm.Session), "") // auto commit
-	dao.Delete(new(xorm.Session)) // handle fail and auto rollback
+	dao.Delete(new(xorm.Session))     // handle fail and auto rollback
 }

@@ -1,4 +1,4 @@
-module github.com/handsomestWei/go-annotation
+module github.com/ClessLi/go-annotation
 
 go 1.12
 

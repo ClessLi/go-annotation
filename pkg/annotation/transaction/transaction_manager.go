@@ -2,8 +2,8 @@ package transaction
 
 import (
 	"fmt"
-	"github.com/handsomestWei/go-annotation/aop"
-	"github.com/handsomestWei/go-annotation/ast"
+	"github.com/ClessLi/go-annotation/pkg/aop"
+	"github.com/ClessLi/go-annotation/pkg/ast"
 	"io/ioutil"
 	"os"
 	"path"
