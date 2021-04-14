@@ -6,23 +6,24 @@ import (
 	"strings"
 )
 
-type Analyser interface {
+type Analyzer interface {
 	ScanFuncDecl(file *ast.File, targetAnnotation string) PackageInfo
+	ScanMethodByClass(object interface{}, targetAnnotation string) PackageInfo
 }
 
-type analyser struct {
+type analyzer struct {
 	commentPrefix    string
 	annotationPrefix string
 }
 
-func NewAnalyser() Analyser {
-	return &analyser{
+func NewAnalyzer() Analyzer {
+	return &analyzer{
 		commentPrefix:    commentsPrefix,
 		annotationPrefix: annotationPrefix,
 	}
 }
 
-func (a analyser) ScanFuncDecl(file *ast.File, targetAnnotation string) PackageInfo {
+func (a analyzer) ScanFuncDecl(file *ast.File, targetAnnotation string) PackageInfo {
 	info := newPkgInfo(file.Name.String())
 	for _, d := range file.Decls {
 		switch decl := d.(type) {
@@ -35,7 +36,28 @@ func (a analyser) ScanFuncDecl(file *ast.File, targetAnnotation string) PackageI
 	return PackageInfo(info)
 }
 
-func (a analyser) isContainAnnotation(lines []*ast.Comment, targetAnnotation string) bool {
+func (a analyzer) ScanMethodByClass(object interface{}, targetAnnotation string) PackageInfo {
+	f, err := GetSingletonObjectAnalyzerInstance().AnalysisObjectToAstFiles(object)
+	if err != nil || f == nil || len(f) < 1 {
+		return nil
+	}
+
+	info := newPkgInfo(f[0].Name.String())
+	for _, file := range f {
+		for _, d := range file.Decls {
+			doCaseFuncDeclPtr(d, func(fd *ast.FuncDecl) bool {
+				if fd.Doc != nil && a.isContainAnnotation(fd.Doc.List, targetAnnotation) {
+					a.analysisAnnotation(fd, info, targetAnnotation)
+					return true
+				}
+				return false
+			})
+		}
+	}
+	return PackageInfo(info)
+}
+
+func (a analyzer) isContainAnnotation(lines []*ast.Comment, targetAnnotation string) bool {
 	for _, l := range lines {
 		c := strings.TrimSpace(strings.TrimLeft(l.Text, a.commentPrefix))
 		annotation := strings.TrimLeft(c, a.annotationPrefix)
@@ -46,7 +68,7 @@ func (a analyser) isContainAnnotation(lines []*ast.Comment, targetAnnotation str
 	return false
 }
 
-func (a analyser) analysisAnnotation(decl *ast.FuncDecl, info *pkgInfo, annotation string) {
+func (a analyzer) analysisAnnotation(decl *ast.FuncDecl, info *pkgInfo, annotation string) {
 	if info.Receivers == nil {
 		info.Receivers = make(map[string]*RecvInfo)
 	}
@@ -66,7 +88,7 @@ func (a analyser) analysisAnnotation(decl *ast.FuncDecl, info *pkgInfo, annotati
 	}
 }
 
-func (a analyser) analysisAnnotationToMethod(field *ast.Field, info *pkgInfo, methodName string, annotation string) {
+func (a analyzer) analysisAnnotationToMethod(field *ast.Field, info *pkgInfo, methodName string, annotation string) {
 	switch f := field.Type.(type) {
 	case *ast.StarExpr:
 		recvName := fmt.Sprintf("%v", f.X)
@@ -80,12 +102,21 @@ func (a analyser) analysisAnnotationToMethod(field *ast.Field, info *pkgInfo, me
 
 }
 
-func (a analyser) analysisAnnotationToFunc(info *pkgInfo, funcName string, annotation string) {
+func (a analyzer) analysisAnnotationToFunc(info *pkgInfo, funcName string, annotation string) {
 	if _, has := info.Funcs[funcName]; !has {
 		info.Funcs[funcName] = newFuncInfo(info.GetPackageName(), funcName)
 	}
 	info.Funcs[funcName].SetAnnotation(annotation)
 }
+
+//func (a analyzer) scanFileByClass(object interface{}) *ast.File {
+//	gomodFilePath := os.Getenv("GOMOD")
+//	gosumFilePath := filepath.Join(filepath.Dir(gomodFilePath), "go.sum")
+//	pkgPath := reflect.TypeOf(object).PkgPath()
+//
+//	gomodPkgPath := os.Getenv("GOMODCACHE")
+//	gopath := os.Getenv("GOPATH")
+//}
 
 type PackageInfo interface {
 	GetPackageName() string
