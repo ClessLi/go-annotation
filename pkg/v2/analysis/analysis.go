@@ -194,7 +194,7 @@ type MethodInfo struct {
 	PkgName       string
 	RecvName      string
 	MethodName    string
-	HasAnnotation map[string]bool
+	hasAnnotation map[string]bool
 }
 
 func newMethodInfo(pkgName, recvName, methodName string) *MethodInfo {
@@ -202,12 +202,19 @@ func newMethodInfo(pkgName, recvName, methodName string) *MethodInfo {
 		PkgName:       pkgName,
 		RecvName:      recvName,
 		MethodName:    methodName,
-		HasAnnotation: make(map[string]bool),
+		hasAnnotation: make(map[string]bool),
 	}
 }
 
 func (m *MethodInfo) SetAnnotation(annotation string) {
-	m.HasAnnotation[annotation] = true
+	m.hasAnnotation[annotation] = true
+}
+
+func (m MethodInfo) HasAnnotation(methodLocation string) bool {
+	if _, has := m.hasAnnotation[methodLocation]; has {
+		return m.hasAnnotation[methodLocation]
+	}
+	return false
 }
 
 type FuncInfo struct {

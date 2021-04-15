@@ -15,6 +15,14 @@ type TestTransact struct {
 func (*TestTransact) Before() {
 }
 
+//@EventBus
+//@Transactional
+func (*TestTransact) After() {
+}
+
+func (t *TestTransact) Finally() {
+}
+
 func TestAnalyser_ScanFuncDecl(t *testing.T) {
 	fileName := `analysis_test.go`
 	//bt, _ := ioutil.ReadFile(fileName)
@@ -29,8 +37,9 @@ func TestAnalyser_ScanFuncDecl(t *testing.T) {
 	info := analyzer.ScanFuncDecl(f, "Transactional")
 	for _, recvName := range info.GetRecvNames() {
 		for _, methodInfo := range info.GetRecv(recvName).Methods {
-			if methodInfo.HasAnnotation["Transactional"] {
+			if methodInfo.HasAnnotation("Transactional") {
 				t.Logf("%v.%v has 'Transactional' annotation.", recvName, methodInfo.MethodName)
+				t.Logf("%v", methodInfo)
 			} else {
 				t.Logf("%v.%v has not 'Transactional' annotation.", recvName, methodInfo.MethodName)
 			}
@@ -44,8 +53,9 @@ func TestAnalyzer_ScanMethodByClass(t *testing.T) {
 	info := analyzer.ScanMethodByClass(test, "Transactional")
 	for _, recvName := range info.GetRecvNames() {
 		for _, methodInfo := range info.GetRecv(recvName).Methods {
-			if methodInfo.HasAnnotation["Transactional"] {
+			if methodInfo.HasAnnotation("Transactional") {
 				t.Logf("%v.%v has 'Transactional' annotation.", recvName, methodInfo.MethodName)
+				t.Logf("%v", methodInfo)
 			} else {
 				t.Logf("%v.%v has not 'Transactional' annotation.", recvName, methodInfo.MethodName)
 			}
