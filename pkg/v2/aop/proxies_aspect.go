@@ -4,6 +4,7 @@ import (
 	"bou.ke/monkey"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 )
 
@@ -30,8 +31,10 @@ var (
 func GetSingletonAspectInstance() ProxiesAspect {
 	onceForAspect.Do(func() {
 		a := &aspect{
-			RWMutex: sync.RWMutex{},
-			units:   make(map[string]Proxy),
+			RWMutex:   sync.RWMutex{},
+			hasProxy:  make(map[string]bool),
+			units:     make(map[string]Proxy),
+			unitNames: make([]string, 0),
 		}
 		SingletonAspect = ProxiesAspect(a)
 	})
@@ -49,14 +52,30 @@ func (a *aspect) RegisterDelegate(delegateType reflect.Type) {
 	}
 	for i := 0; i < delegateType.NumMethod(); i++ {
 		method := delegateType.Method(i)
-		//pkgList := strings.Split(pkgPth, "/")
-		//methodLocation := fmt.Sprintf("%s.%s.%s", pkgList[len(pkgList)-1], receiverName, method.Name)
-		methodLocation := fmt.Sprintf("<%s>%s.%s", pkgPth, receiverName, method.Name)
+		pkgList := strings.Split(pkgPth, "/")
+		methodLocation := fmt.Sprintf("%s.%s.%s", pkgList[len(pkgList)-1], receiverName, method.Name)
+		//methodLocation := fmt.Sprintf("<%s>%s.%s", pkgPth, receiverName, method.Name)
 		if has, isIn := a.hasProxy[methodLocation]; isIn && has {
 			continue
 		}
+		//guard := new(monkey.PatchGuard)
+		//var proxyProcessed = func(in []reflect.Value) []reflect.Value {
+		//	guard.Unpatch()
+		//	defer guard.Restore()
+		//	receiver := in[0]
+		//	delegate := NewDelegate(receiver, method, in[1:])
+		//	defer a.finallyProcessed(delegate, methodLocation)
+		//	if !a.beforeProcessed(delegate, methodLocation) {
+		//		return delegate.Result
+		//	}
+		//	delegate.Result = receiver.MethodByName(method.Name).Call(in[1:])
+		//	a.afterProcessed(delegate, methodLocation)
+		//	return delegate.Result
+		//}
+		//proxyFn := reflect.MakeFunc(method.Func.Type(), proxyProcessed)
+		//*guard = *monkey.PatchInstanceMethod(delegateType, method.Name, proxyFn.Interface())
 		var guard *monkey.PatchGuard
-		var proxyProcessed = func(in []reflect.Value) []reflect.Value {
+		guard = monkey.PatchInstanceMethod(delegateType, method.Name, reflect.MakeFunc(method.Func.Type(), func(in []reflect.Value) (results []reflect.Value) {
 			guard.Unpatch()
 			defer guard.Restore()
 			receiver := in[0]
@@ -68,9 +87,8 @@ func (a *aspect) RegisterDelegate(delegateType reflect.Type) {
 			delegate.Result = receiver.MethodByName(method.Name).Call(in[1:])
 			a.afterProcessed(delegate, methodLocation)
 			return delegate.Result
-		}
-		proxyFn := reflect.MakeFunc(method.Func.Type(), proxyProcessed)
-		guard = monkey.PatchInstanceMethod(delegateType, method.Name, proxyFn.Interface())
+
+		}).Interface())
 		a.hasProxy[methodLocation] = true
 	}
 }

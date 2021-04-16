@@ -35,12 +35,13 @@ func NewAnnotation(targetAnnotation string) Annotation {
 
 func (a *annotation) RegisterAnnotatedObject(object interface{}) {
 	objectType := reflect.TypeOf(object)
-	if objectType.Kind() == reflect.Ptr {
-		objectType = objectType.Elem()
+	tObjectType := objectType
+	if tObjectType.Kind() == reflect.Ptr {
+		tObjectType = tObjectType.Elem()
 	}
 	//pkgPath := objectType.PkgPath()
 	pkgInfo := a.analyzer.ScanMethodByClass(object, a.targetAnnotation)
-	classInfo := pkgInfo.GetRecv(objectType.Name())
+	classInfo := pkgInfo.GetRecv(tObjectType.Name())
 	if classInfo != nil {
 		a.aopAspect.RegisterDelegate(objectType)
 		for _, methodInfo := range classInfo.Methods {
